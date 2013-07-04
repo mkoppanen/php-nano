@@ -1,0 +1,390 @@
+/*
++-----------------------------------------------------------------------------------+
+|  nanomsg extension for PHP                                                        |
+|  Copyright (c) 2013, Mikko Koppanen <mkoppanen@php.net>                           |
+|  All rights reserved.                                                             |
++-----------------------------------------------------------------------------------+
+|  Redistribution and use in source and binary forms, with or without               |
+|  modification, are permitted provided that the following conditions are met:      |
+|     * Redistributions of source code must retain the above copyright              |
+|       notice, this list of conditions and the following disclaimer.               |
+|     * Redistributions in binary form must reproduce the above copyright           |
+|       notice, this list of conditions and the following disclaimer in the         |
+|       documentation and/or other materials provided with the distribution.        |
+|     * Neither the name of the copyright holder nor the                            |
+|       names of its contributors may be used to endorse or promote products        |
+|       derived from this software without specific prior written permission.       |
++-----------------------------------------------------------------------------------+
+|  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND  | 
+|  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED    |   
+|  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           |
+|  DISCLAIMED. IN NO EVENT SHALL MIKKO KOPPANEN OR CONTRIBUTORS BE LIABLE FOR       |
+|  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES   |   
+|  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;     |
+|  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND      |
+|  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT       |
+|  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS    |   
+|  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                     |
++-----------------------------------------------------------------------------------+
+*/
+
+#include "php_nano.h"
+#include "php_nano_private.h"
+
+static
+    zend_class_entry *php_nano_sc_entry,
+                     *php_nano_socket_sc_entry,
+                     *php_nano_exception_sc_entry;
+
+static
+    zend_object_handlers nano_object_handlers,
+                         nano_socket_object_handlers;
+
+/* {{{ proto void NanoMsg\Nano::__construct()
+	Private constructor
+*/
+PHP_METHOD(nano, __construct)
+{
+}
+/* }}} */
+
+/* {{{ proto void NanoMsg\Socket::__construct(int $domain, int $protocol)
+	Construct a new nano socket
+*/
+PHP_METHOD(socket, __construct)
+{
+	php_nano_socket_object *intern;
+    long domain, protocol;
+    int rc;
+
+	PHP_NANO_ERROR_HANDLING_INIT()
+	PHP_NANO_ERROR_HANDLING_THROW()
+
+    rc = zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "ll", &domain, &protocol);
+
+	PHP_NANO_ERROR_HANDLING_RESTORE()
+
+	if (rc == FAILURE) {
+		return;
+	}
+
+	intern    = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern->s = nn_socket (domain, protocol);
+
+    if (intern->s < 0)
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error creating nano socket: %s", nn_strerror (errno));
+}
+/* }}} */
+
+/* {{{ proto int NanoMsg\Socket::bind(string $endpoint)
+    Bind the socket to an endpoint
+*/
+PHP_METHOD(socket, bind)
+{
+	php_nano_socket_object *intern;
+    char *endpoint;
+    int endpoint_len;
+    int eid;
+
+	if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
+		return;
+	}
+
+	intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    eid = nn_bind (intern->s, endpoint);
+
+    if (eid < 0)
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error binding nano socket: %s", nn_strerror (errno));
+
+    // Return the endpoint ID
+    RETURN_LONG (eid);
+}
+/* }}} */
+
+/* {{{ proto int NanoMsg\Socket::connect(string $endpoint)
+    Connect the socket to an endpoint
+*/
+PHP_METHOD(socket, connect)
+{
+	php_nano_socket_object *intern;
+    char *endpoint;
+    int endpoint_len;
+    int eid;
+
+	if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
+		return;
+	}
+
+	intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    eid = nn_connect (intern->s, endpoint);
+
+    if (eid < 0)
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error connecting nano socket: %s", nn_strerror (errno));
+
+    // Return the endpoint ID
+    RETURN_LONG (eid);
+}
+/* }}} */
+
+/* {{{ proto int NanoMsg\Socket::shutdown(int $endpoint_id)
+    Remove an endpoint from a socket
+*/
+PHP_METHOD(socket, shutdown)
+{
+	php_nano_socket_object *intern;
+    long eid, rc;
+
+	if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "l", &eid) == FAILURE) {
+		return;
+	}
+
+	intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    rc = nn_shutdown (intern->s, eid);
+
+    if (rc < 0)
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error removing endpoint: %s", nn_strerror (errno));
+    RETURN_TRUE;
+}
+/* }}} */
+
+/* {{{ proto int NanoMsg\Socket::send(string $message[, int $flags])
+    send a message
+*/
+PHP_METHOD(socket, send)
+{
+	php_nano_socket_object *intern;
+    char *message;
+    int rc, message_len;
+    long flags = 0;
+
+	if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s|l", &message, &message_len, &flags) == FAILURE) {
+		return;
+	}
+
+	intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    rc = nn_send (intern->s, message, message_len, flags);
+
+    if (rc < 0) {
+        if (flags & NN_DONTWAIT && errno == EAGAIN) {
+            RETURN_FALSE;
+        }
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error sending message: %s", nn_strerror (errno));
+    }
+    RETURN_TRUE;
+}
+/* }}} */
+
+/* {{{ proto int NanoMsg\Socket::recv([int $flags])
+    send a message
+*/
+PHP_METHOD(socket, recv)
+{
+	php_nano_socket_object *intern;
+    void *buffer;
+    int len;
+    long flags = 0;
+
+	if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "|l", &flags) == FAILURE) {
+		return;
+	}
+
+	intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    len = nn_recv (intern->s, &buffer, NN_MSG, flags);
+
+    if (len < 0) {
+        if (flags & NN_DONTWAIT && errno == EAGAIN) {
+            RETURN_FALSE;
+        }
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error receiving message: %s", nn_strerror (errno));
+    }
+
+    // Create return value
+    ZVAL_STRINGL (return_value, buffer, len, 1);
+    nn_freemsg (buffer);
+    return;
+}
+/* }}} */
+
+
+ZEND_BEGIN_ARG_INFO_EX(nano_construct_args, 0, 0, 1)
+	ZEND_ARG_INFO(0, key)
+ZEND_END_ARG_INFO()
+
+static zend_function_entry php_nano_class_methods [] = {
+    PHP_ME (nano,    __construct,    nano_construct_args,    ZEND_ACC_PRIVATE|ZEND_ACC_CTOR)
+    {NULL, NULL, NULL}
+};
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_construct_args, 0, 0, 2)
+    ZEND_ARG_INFO(0, domain)
+    ZEND_ARG_INFO(0, protocol)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_bind_args, 0, 0, 1)
+	ZEND_ARG_INFO(0, endpoint)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_connect_args, 0, 0, 1)
+	ZEND_ARG_INFO(0, endpoint)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_shutdown_args, 0, 0, 1)
+	ZEND_ARG_INFO(0, endpoint_id)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_send_args, 0, 0, 1)
+	ZEND_ARG_INFO(0, message)
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_recv_args, 0, 0, 0)
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
+
+static zend_function_entry php_nano_socket_class_methods [] = {
+    PHP_ME (socket,    __construct, nano_socket_construct_args, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+    PHP_ME (socket,    bind,        nano_socket_bind_args,      ZEND_ACC_PUBLIC)
+    PHP_ME (socket,    connect,     nano_socket_connect_args,   ZEND_ACC_PUBLIC)
+    PHP_ME (socket,    shutdown,    nano_socket_shutdown_args,  ZEND_ACC_PUBLIC)
+    PHP_ME (socket,    send,        nano_socket_send_args,      ZEND_ACC_PUBLIC)
+    PHP_ME (socket,    recv,        nano_socket_recv_args,      ZEND_ACC_PUBLIC)
+    {NULL, NULL, NULL}
+};
+
+zend_function_entry nano_functions[] = {
+    {NULL, NULL, NULL}
+};
+
+static
+void s_register_constants ()
+{
+#define PHP_NANO_REGISTER_CONST_LONG(const_name, value) \
+	zend_declare_class_constant_long (php_nano_sc_entry, const_name, strlen (const_name), (long) value TSRMLS_CC);
+
+    // Register the symbols
+    int value, i;
+    for (i = 0; ; ++i) {
+        const char *name = nn_symbol (i, &value);
+        if (name == NULL)
+            break;
+
+        PHP_NANO_REGISTER_CONST_LONG (name, value);
+    }
+#undef PHP_NANO_REGISTER_CONST_LONG
+}
+
+static
+void s_nano_socket_object_free_storage (void *object TSRMLS_DC)
+{
+	php_nano_socket_object *intern = (php_nano_socket_object *) object;
+
+	if (!intern) {
+		return;
+	}
+
+	if (intern->s >= 0) {
+	    int rc = nn_close (intern->s);
+	    // TODO: error checking
+	}
+
+	zend_object_std_dtor (&intern->zo TSRMLS_CC);
+	efree (intern);
+}
+
+/* PHP 5.4 */
+#if PHP_VERSION_ID < 50399
+# define object_properties_init(zo, class_type) { \
+			zval *tmp; \
+			zend_hash_copy((*zo).properties, \
+							&class_type->default_properties, \
+							(copy_ctor_func_t) zval_add_ref, \
+							(void *) &tmp, \
+							sizeof(zval *)); \
+		 }
+#endif
+
+static
+zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
+{
+	zval *tmp;
+	zend_object_value retval;
+	php_nano_socket_object *intern;
+
+	/* Allocate memory for it */
+	intern = (php_nano_socket_object *) emalloc (sizeof (php_nano_socket_object));
+	memset (&intern->zo, 0, sizeof (zend_object));
+
+	intern->s = -1;
+
+	if (ptr) {
+		*ptr = intern;
+	}
+
+	zend_object_std_init (&intern->zo, class_type TSRMLS_CC);
+	object_properties_init (&intern->zo, class_type);
+
+	retval.handle = zend_objects_store_put (intern, NULL, (zend_objects_free_object_storage_t) s_nano_socket_object_free_storage, NULL TSRMLS_CC);
+	retval.handlers = (zend_object_handlers *) &nano_socket_object_handlers;
+	return retval;
+}
+
+static
+zend_object_value s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
+{
+	return
+	    s_nano_socket_object_new_ex (class_type, NULL TSRMLS_CC);
+}
+
+PHP_MINIT_FUNCTION(nano)
+{
+    zend_class_entry ce, ce_socket, ce_exception;
+
+    // Register nanomsg class and the exception class
+    memcpy (&nano_object_handlers, zend_get_std_object_handlers (), sizeof (zend_object_handlers));
+    memcpy (&nano_socket_object_handlers, zend_get_std_object_handlers (), sizeof (zend_object_handlers));
+
+	INIT_NS_CLASS_ENTRY (ce, "NanoMsg", "Nano", php_nano_class_methods);
+	ce.create_object = NULL;
+	nano_object_handlers.clone_obj = NULL;
+	php_nano_sc_entry = zend_register_internal_class (&ce TSRMLS_CC);
+
+	INIT_NS_CLASS_ENTRY (ce_socket, "NanoMsg", "Socket", php_nano_socket_class_methods);
+	ce_socket.create_object = s_nano_socket_object_new;
+	nano_socket_object_handlers.clone_obj = NULL;
+	php_nano_socket_sc_entry = zend_register_internal_class (&ce_socket TSRMLS_CC);
+
+    INIT_NS_CLASS_ENTRY (ce_exception, "NanoMsg", "Exception", NULL);
+	php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C), NULL TSRMLS_CC);
+	php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL_CLASS;
+
+    // Register all symbols as class constants
+    s_register_constants ();
+}
+
+
+PHP_MINFO_FUNCTION(nano)
+{
+    php_info_print_table_start();
+        php_info_print_table_header(2, "nanomsg extension", "enabled");
+        php_info_print_table_row(2, "PHP extension version", PHP_NANO_EXTVER);
+        php_info_print_table_row(2, "nanomsg version", NN_VERSION);
+    php_info_print_table_end();
+}
+
+zend_module_entry nano_module_entry =
+{
+    STANDARD_MODULE_HEADER,
+    PHP_NANO_EXTNAME,
+    nano_functions,         /* Functions */
+    PHP_MINIT(nano),        /* MINIT */
+    NULL,                   /* MSHUTDOWN */
+    NULL,                   /* RINIT */
+    NULL,                   /* RSHUTDOWN */
+    PHP_MINFO(nano),        /* MINFO */
+    PHP_NANO_EXTVER,        /* version */
+    STANDARD_MODULE_PROPERTIES
+};
+
+#ifdef COMPILE_DL_NANO
+ZEND_GET_MODULE(nano)
+#endif /* COMPILE_DL_NANO */
