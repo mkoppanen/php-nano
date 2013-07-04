@@ -93,8 +93,10 @@ PHP_METHOD(socket, bind)
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
     eid = nn_bind (intern->s, endpoint);
 
-    if (eid < 0)
+    if (eid < 0) {
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error binding nano socket: %s", nn_strerror (errno));
+        return;
+    }
 
     // Return the endpoint ID
     RETURN_LONG (eid);
@@ -118,8 +120,10 @@ PHP_METHOD(socket, connect)
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
     eid = nn_connect (intern->s, endpoint);
 
-    if (eid < 0)
+    if (eid < 0) {
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error connecting nano socket: %s", nn_strerror (errno));
+        return;
+    }
 
     // Return the endpoint ID
     RETURN_LONG (eid);
@@ -141,8 +145,10 @@ PHP_METHOD(socket, shutdown)
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
     rc = nn_shutdown (intern->s, eid);
 
-    if (rc < 0)
+    if (rc < 0) {
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error removing endpoint: %s", nn_strerror (errno));
+        return;
+    }
     RETURN_TRUE;
 }
 /* }}} */
@@ -169,6 +175,7 @@ PHP_METHOD(socket, send)
             RETURN_FALSE;
         }
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error sending message: %s", nn_strerror (errno));
+        return;
     }
     RETURN_TRUE;
 }
@@ -196,6 +203,7 @@ PHP_METHOD(socket, recv)
             RETURN_FALSE;
         }
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error receiving message: %s", nn_strerror (errno));
+        return;
     }
 
     // Create return value
