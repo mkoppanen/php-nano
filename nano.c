@@ -97,7 +97,6 @@ PHP_METHOD(socket, bind)
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error binding nano socket: %s", nn_strerror (errno));
         return;
     }
-
     // Return the endpoint ID
     RETURN_LONG (eid);
 }
@@ -124,13 +123,12 @@ PHP_METHOD(socket, connect)
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error connecting nano socket: %s", nn_strerror (errno));
         return;
     }
-
     // Return the endpoint ID
     RETURN_LONG (eid);
 }
 /* }}} */
 
-/* {{{ proto int NanoMsg\Socket::shutdown(int $endpoint_id)
+/* {{{ proto boolean NanoMsg\Socket::shutdown(int $endpoint_id)
     Remove an endpoint from a socket
 */
 PHP_METHOD(socket, shutdown)
@@ -153,7 +151,7 @@ PHP_METHOD(socket, shutdown)
 }
 /* }}} */
 
-/* {{{ proto int NanoMsg\Socket::send(string $message[, int $flags])
+/* {{{ proto boolean NanoMsg\Socket::send(string $message[, int $flags])
     send a message
 */
 PHP_METHOD(socket, send)
@@ -181,8 +179,8 @@ PHP_METHOD(socket, send)
 }
 /* }}} */
 
-/* {{{ proto int NanoMsg\Socket::recv([int $flags])
-    send a message
+/* {{{ proto string NanoMsg\Socket::recv([int $flags])
+    receive a message
 */
 PHP_METHOD(socket, recv)
 {
@@ -213,6 +211,76 @@ PHP_METHOD(socket, recv)
 }
 /* }}} */
 
+/* {{{ proto int NanoMsg\Socket::setSockOpt(int $level, int $option, mixed $value)
+    set a socket option
+*/
+PHP_METHOD(socket, setsockopt)
+{
+    php_nano_socket_object *intern;
+    long option, level;
+    zval *value;
+    int rc = 0;
+
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "llz", &level, &option, &value) == FAILURE) {
+        return;
+    }
+
+    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+
+    // Handle string options 
+    if (level == NN_SUB && (option == NN_SUB_SUBSCRIBE || option == NN_SUB_UNSUBSCRIBE)) {
+        // Add topic
+        if (Z_STRVAL_P (value)) {
+            rc = nn_setsockopt (intern->s, level, option, Z_STRVAL_P (value), Z_STRLEN_P (value));
+        }
+    }
+    else {
+        int v = Z_LVAL_P (value);
+        rc = nn_setsockopt (intern->s, level, option, &v, sizeof (int));
+    }
+    if (rc < 0) {
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Failed to set socket option: %s", nn_strerror (errno));
+        return;
+    }
+    RETURN_TRUE;
+}
+/* }}} */
+
+/* {{{ proto mixed NanoMsg\Socket::getSockOpt(int $level, int $option)
+    send a message
+*/
+PHP_METHOD(socket, getsockopt)
+{
+    php_nano_socket_object *intern;
+    long option, level;
+    int v, rc = 0;
+
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "ll", &level, &option) == FAILURE) {
+        return;
+    }
+
+    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+
+    size_t sz = sizeof (v);
+    rc = nn_getsockopt (intern->s, level, option, &v, &sz);
+
+    // Wrap this as a socket
+    if (level == NN_SOL_SOCKET && (option == NN_SNDFD || option == NN_RCVFD)) {
+        // Create PHP socket resource
+        php_stream *stream = php_stream_sock_open_from_socket (v, 0);
+        if (!stream) {
+            zend_throw_exception_ex (php_nano_exception_sc_entry, 0 TSRMLS_CC, "Failed to convert the handle to PHP stream");
+            return;
+        }
+
+        stream->flags |= PHP_STREAM_FLAG_NO_CLOSE;
+        php_stream_to_zval (stream, return_value);
+        return;
+    } else {
+        RETURN_LONG(v);
+    }
+}
+/* }}} */
 
 ZEND_BEGIN_ARG_INFO_EX(nano_construct_args, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
@@ -249,13 +317,26 @@ ZEND_BEGIN_ARG_INFO_EX(nano_socket_recv_args, 0, 0, 0)
     ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_setsockopt_args, 0, 0, 3)
+    ZEND_ARG_INFO(0, level)
+    ZEND_ARG_INFO(0, option)
+    ZEND_ARG_INFO(0, value)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_socket_getsockopt_args, 0, 0, 3)
+    ZEND_ARG_INFO(0, level)
+    ZEND_ARG_INFO(0, option)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry php_nano_socket_class_methods [] = {
-    PHP_ME (socket,    __construct, nano_socket_construct_args, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-    PHP_ME (socket,    bind,        nano_socket_bind_args,      ZEND_ACC_PUBLIC)
-    PHP_ME (socket,    connect,     nano_socket_connect_args,   ZEND_ACC_PUBLIC)
-    PHP_ME (socket,    shutdown,    nano_socket_shutdown_args,  ZEND_ACC_PUBLIC)
-    PHP_ME (socket,    send,        nano_socket_send_args,      ZEND_ACC_PUBLIC)
-    PHP_ME (socket,    recv,        nano_socket_recv_args,      ZEND_ACC_PUBLIC)
+    PHP_ME (socket, __construct, nano_socket_construct_args,  ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+    PHP_ME (socket, bind,        nano_socket_bind_args,       ZEND_ACC_PUBLIC)
+    PHP_ME (socket, connect,     nano_socket_connect_args,    ZEND_ACC_PUBLIC)
+    PHP_ME (socket, shutdown,    nano_socket_shutdown_args,   ZEND_ACC_PUBLIC)
+    PHP_ME (socket, send,        nano_socket_send_args,       ZEND_ACC_PUBLIC)
+    PHP_ME (socket, recv,        nano_socket_recv_args,       ZEND_ACC_PUBLIC)
+    PHP_ME (socket, setsockopt,  nano_socket_setsockopt_args, ZEND_ACC_PUBLIC)
+    PHP_ME (socket, getsockopt,  nano_socket_getsockopt_args, ZEND_ACC_PUBLIC)
     {NULL, NULL, NULL}
 };
 
