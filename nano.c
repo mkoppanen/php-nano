@@ -253,7 +253,8 @@ PHP_METHOD(socket, getsockopt)
 {
     php_nano_socket_object *intern;
     long option, level;
-    int v, rc = 0;
+    int v, rc;
+    size_t sz;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "ll", &level, &option) == FAILURE) {
         return;
@@ -261,7 +262,7 @@ PHP_METHOD(socket, getsockopt)
 
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
 
-    size_t sz = sizeof (v);
+    sz = sizeof (v);
     rc = nn_getsockopt (intern->s, level, option, &v, &sz);
 
     if (rc < 0) {
@@ -277,7 +278,6 @@ PHP_METHOD(socket, getsockopt)
             zend_throw_exception_ex (php_nano_exception_sc_entry, 0 TSRMLS_CC, "Failed to convert the handle to PHP stream");
             return;
         }
-
         stream->flags |= PHP_STREAM_FLAG_NO_CLOSE;
         php_stream_to_zval (stream, return_value);
         return;

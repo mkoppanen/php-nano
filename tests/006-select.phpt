@@ -21,7 +21,7 @@ $rcvfd = $sub->getSockOpt (Nano::NN_SOL_SOCKET, Nano::NN_RCVFD);
 var_dump ($rcvfd);
 
 // and the send fd
-$sndfd = $sub->getSockOpt (Nano::NN_SOL_SOCKET, Nano::NN_SNDFD);
+$sndfd = $pub->getSockOpt (Nano::NN_SOL_SOCKET, Nano::NN_SNDFD);
 var_dump ($sndfd);
 
 $read = array ($rcvfd, $sndfd);
