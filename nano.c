@@ -264,6 +264,11 @@ PHP_METHOD(socket, getsockopt)
     size_t sz = sizeof (v);
     rc = nn_getsockopt (intern->s, level, option, &v, &sz);
 
+    if (rc < 0) {
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Failed to get socket option: %s", nn_strerror (errno));
+        return;
+    }
+
     // Wrap this as a socket
     if (level == NN_SOL_SOCKET && (option == NN_SNDFD || option == NN_RCVFD)) {
         // Create PHP socket resource
