@@ -221,7 +221,7 @@ PHP_METHOD(socket, setsockopt)
     zval *value;
     int rc = 0;
 
-    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "llz", &level, &option, &value) == FAILURE) {
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "llz/", &level, &option, &value) == FAILURE) {
         return;
     }
 
@@ -230,6 +230,8 @@ PHP_METHOD(socket, setsockopt)
     // Handle string options 
     if (level == NN_SUB && (option == NN_SUB_SUBSCRIBE || option == NN_SUB_UNSUBSCRIBE)) {
         // Add topic
+        convert_to_string (value);
+
         if (Z_STRVAL_P (value)) {
             rc = nn_setsockopt (intern->s, level, option, Z_STRVAL_P (value), Z_STRLEN_P (value));
         }
@@ -461,7 +463,6 @@ PHP_MINFO_FUNCTION(nano)
     php_info_print_table_start();
         php_info_print_table_header(2, "nanomsg extension", "enabled");
         php_info_print_table_row(2, "PHP extension version", PHP_NANO_EXTVER);
-        //php_info_print_table_row(2, "nanomsg version", NN_VERSION);
     php_info_print_table_end();
 }
 
