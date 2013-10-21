@@ -455,6 +455,7 @@ PHP_MINIT_FUNCTION(nano)
 
     // Register all symbols as class constants
     s_register_constants (TSRMLS_C);
+    return SUCCESS;
 }
 
 

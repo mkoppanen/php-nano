@@ -36,6 +36,7 @@
 
 #include "main/php_network.h"
 #include "Zend/zend_exceptions.h"
+#include "ext/standard/info.h"
 
 /*
   Definition for the main class (holds constants)
