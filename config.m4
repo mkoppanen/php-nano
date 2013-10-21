@@ -33,7 +33,7 @@ if test "$PHP_NANO" != "no"; then
     PHP_EVAL_LIBLINE($PHP_NANO_LIBS, NANO_SHARED_LIBADD)
     PHP_EVAL_INCLINE($PHP_NANO_INCS)
   else
-    AC_MSG_ERROR(Unable to find nanomsg installation)
+    AC_MSG_ERROR(Unable to find usable nanomsg installation)
   fi
 
   PHP_ADD_EXTENSION_DEP(nano, spl)
