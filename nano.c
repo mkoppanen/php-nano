@@ -350,7 +350,7 @@ zend_function_entry nano_functions[] = {
 };
 
 static
-void s_register_constants ()
+void s_register_constants (TSRMLS_D)
 {
 #define PHP_NANO_REGISTER_CONST_LONG(const_name, value) \
     zend_declare_class_constant_long (php_nano_sc_entry, const_name, strlen (const_name), (long) value TSRMLS_CC);
@@ -452,7 +452,7 @@ PHP_MINIT_FUNCTION(nano)
     php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL_CLASS;
 
     // Register all symbols as class constants
-    s_register_constants ();
+    s_register_constants (TSRMLS_C);
 }
 
 
@@ -461,7 +461,7 @@ PHP_MINFO_FUNCTION(nano)
     php_info_print_table_start();
         php_info_print_table_header(2, "nanomsg extension", "enabled");
         php_info_print_table_row(2, "PHP extension version", PHP_NANO_EXTVER);
-        php_info_print_table_row(2, "nanomsg version", NN_VERSION);
+        //php_info_print_table_row(2, "nanomsg version", NN_VERSION);
     php_info_print_table_end();
 }
 
