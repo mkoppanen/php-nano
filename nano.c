@@ -60,7 +60,7 @@ void s_symbol_info_to_zval (zval *zv, struct nn_symbol_properties *buffer TSRMLS
     zend_update_property_long (NULL, zv, "unit", sizeof ("unit") - 1, (long) buffer->unit TSRMLS_CC);
 }
 
-/* {{{ proto void NanoMsg\Nano::symbolInfo()
+/* {{{ proto void NanoMsg\Nano::symbolInfo([integer symbol])
     Symbol info
 */
 PHP_METHOD(nano, symbolinfo)
