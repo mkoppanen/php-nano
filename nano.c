@@ -79,7 +79,7 @@ PHP_METHOD(nano, symbolinfo)
         rc = nn_symbol_info (Z_LVAL_P(symbol), &buffer, sizeof (buffer));
 
         if (!rc) {
-            zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Symbol out of range");
+            zend_throw_exception_ex (php_nano_exception_sc_entry, 0 TSRMLS_CC, "Symbol out of range");
             return;
         }
 
