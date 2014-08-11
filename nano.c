@@ -48,6 +48,68 @@ PHP_METHOD(nano, __construct)
 }
 /* }}} */
 
+static
+void s_symbol_info_to_zval (zval *zv, struct nn_symbol_properties *buffer TSRMLS_DC)
+{
+    object_init (zv);
+
+    zend_update_property_string (NULL, zv, "name", sizeof ("name") - 1, buffer->name TSRMLS_CC);
+    zend_update_property_long (NULL, zv, "value", sizeof ("value") - 1, (long) buffer->value TSRMLS_CC);
+    zend_update_property_long (NULL, zv, "ns", sizeof ("ns") - 1, (long) buffer->ns TSRMLS_CC);
+    zend_update_property_long (NULL, zv, "type", sizeof ("type") - 1, (long) buffer->type TSRMLS_CC);
+    zend_update_property_long (NULL, zv, "unit", sizeof ("unit") - 1, (long) buffer->unit TSRMLS_CC);
+}
+
+/* {{{ proto void NanoMsg\Nano::symbolInfo()
+    Symbol info
+*/
+PHP_METHOD(nano, symbolinfo)
+{
+    int i = 0, rc = 0;
+    zval *symbol = NULL;
+
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "|z!", &symbol) == FAILURE) {
+        return;
+    }
+
+    if (symbol) {
+        struct nn_symbol_properties buffer;
+
+        convert_to_long (symbol);
+        rc = nn_symbol_info (Z_LVAL_P(symbol), &buffer, sizeof (buffer));
+
+        if (!rc) {
+            zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error getting symbol info: %s", nn_strerror (errno));
+            return;
+        }
+
+        object_init (return_value);
+        s_symbol_info_to_zval (return_value, &buffer TSRMLS_CC);
+        return;
+    }
+
+    array_init (return_value);
+
+    while (1) {
+        zval *zv;
+        struct nn_symbol_properties buffer;
+        rc = nn_symbol_info (i, &buffer, sizeof (buffer));
+
+        if (!rc) {
+            break;
+        }
+
+        MAKE_STD_ZVAL (zv);
+        object_init (zv);
+
+        s_symbol_info_to_zval (zv, &buffer TSRMLS_CC);
+        add_next_index_zval (return_value, zv);
+        ++i;
+    }
+    return;
+}
+/* }}} */
+
 /* {{{ proto void NanoMsg\Socket::__construct(int $domain, int $protocol)
     Construct a new nano socket
 */
@@ -294,7 +356,8 @@ ZEND_BEGIN_ARG_INFO_EX(nano_construct_args, 0, 0, 1)
 ZEND_END_ARG_INFO()
 
 static zend_function_entry php_nano_class_methods [] = {
-    PHP_ME (nano,    __construct,    nano_construct_args,    ZEND_ACC_PRIVATE|ZEND_ACC_CTOR)
+    PHP_ME (nano,    __construct, nano_construct_args, ZEND_ACC_PRIVATE|ZEND_ACC_CTOR)
+    PHP_ME (nano,    symbolinfo,  nano_construct_args, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 
