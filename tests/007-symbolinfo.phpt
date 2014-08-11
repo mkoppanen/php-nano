@@ -31,10 +31,16 @@ try {
     echo "ALL GOOD" . PHP_EOL;
 }
 
+$test = "1a";
+Nano::symbolInfo ($test);
+echo gettype ($test) . PHP_EOL;
+
+
 echo "OK";
 
 --EXPECT--
 object
 array
 ALL GOOD
+string
 OK

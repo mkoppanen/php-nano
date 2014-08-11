@@ -68,7 +68,7 @@ PHP_METHOD(nano, symbolinfo)
     int i = 0, rc = 0;
     zval *symbol = NULL;
 
-    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "|z!", &symbol) == FAILURE) {
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "|z!/", &symbol) == FAILURE) {
         return;
     }
 
@@ -107,6 +107,25 @@ PHP_METHOD(nano, symbolinfo)
         ++i;
     }
     return;
+}
+/* }}} */
+
+/* {{{ proto void NanoMsg\Nano::device(int s1, int s2)
+    Runs a device
+*/
+PHP_METHOD(nano, device)
+{
+    int rc;
+    long s1, s2;
+
+    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "ll", &s1, &s2) == FAILURE) {
+        return;
+    }
+
+    rc = nn_device (s1, s2);
+
+    if (rc < 0)
+        zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error creating nano device: %s", nn_strerror (errno));
 }
 /* }}} */
 
@@ -355,9 +374,19 @@ ZEND_BEGIN_ARG_INFO_EX(nano_construct_args, 0, 0, 1)
     ZEND_ARG_INFO(0, key)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(nano_symbolinfo_args, 0, 0, 0)
+    ZEND_ARG_INFO(0, symbol)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(nano_device_args, 0, 0, 2)
+    ZEND_ARG_INFO(0, s1)
+    ZEND_ARG_INFO(0, s2)
+ZEND_END_ARG_INFO()
+
 static zend_function_entry php_nano_class_methods [] = {
-    PHP_ME (nano,    __construct, nano_construct_args, ZEND_ACC_PRIVATE|ZEND_ACC_CTOR)
-    PHP_ME (nano,    symbolinfo,  nano_construct_args, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+    PHP_ME (nano,    __construct, nano_construct_args,  ZEND_ACC_PRIVATE|ZEND_ACC_CTOR)
+    PHP_ME (nano,    symbolinfo,  nano_symbolinfo_args, ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+    PHP_ME (nano,    device,      nano_device_args,     ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     {NULL, NULL, NULL}
 };
 
