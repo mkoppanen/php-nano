@@ -1,7 +1,7 @@
 /*
 +-----------------------------------------------------------------------------------+
 |  nanomsg extension for PHP                                                        |
-|  Copyright (c) 2013, Mikko Koppanen <mkoppanen@php.net>                           |
+|  Copyright (c) 2014, Mikko Koppanen <mkoppanen@php.net>                           |
 |  All rights reserved.                                                             |
 +-----------------------------------------------------------------------------------+
 |  Redistribution and use in source and binary forms, with or without               |
@@ -278,7 +278,7 @@ PHP_METHOD(socket, recv)
     len = nn_recv (intern->s, &buffer, NN_MSG, flags);
 
     if (len < 0) {
-        if (flags & NN_DONTWAIT && errno == EAGAIN) {
+        if ((flags & NN_DONTWAIT) && errno == EAGAIN) {
             RETURN_FALSE;
         }
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error receiving message: %s", nn_strerror (errno));

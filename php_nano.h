@@ -1,7 +1,7 @@
 /*
 +-----------------------------------------------------------------------------------+
 |  nanomsg extension for PHP                                                        |
-|  Copyright (c) 2013, Mikko Koppanen <mkoppanen@php.net>                           |
+|  Copyright (c) 2014, Mikko Koppanen <mkoppanen@php.net>                           |
 |  All rights reserved.                                                             |
 +-----------------------------------------------------------------------------------+
 |  Redistribution and use in source and binary forms, with or without               |
