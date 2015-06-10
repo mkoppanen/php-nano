@@ -60,7 +60,17 @@ protocol parameter defines the type of the socket, which in turn determines the 
 * Nano::NN_BUS (see: http://nanomsg.org/v0.5/nn_bus.7.html)
 
 
-NanoMsg\Nano
+NanoMsg\Socket
 =========================
 
+Main class to provide socket.
+
+methods:
+* bind
+* connect
+* shutdown
+* send
+* recv
+* setsockopt
+* getsockopt
 
