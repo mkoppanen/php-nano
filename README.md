@@ -17,15 +17,15 @@ How to install
 7. make
 8. make install
 9. Edit your php.ini file, add extension=nano.so 
-10. Reload fpm service
+10. Restart FPM service or Apache web server.
 
 
-!Note! testd with PHP 5.6.2 only ( PHP_VERSION : 5.6.9-0+deb8u1  ZEND_VERSION: 2.6.0  )
+!Note! tested with PHP 5.6.2 only ( PHP_VERSION : 5.6.9-0+deb8u1  ZEND_VERSION: 2.6.0  ). PHP must support Namespace (PHP 5 >= 5.3.0, see: http://php.net/manual/en/language.namespaces.php)
 
 Base classes and methods
 =========================
 
-php-nano exposed  three global class:
+php-nano exposed namespace NanoMsg with three class:
 
 * NanoMsg\Nano - main class
 * NanoMsg\Socket - base socket class
