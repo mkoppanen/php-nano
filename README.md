@@ -50,7 +50,7 @@ domain of creating socket (see: http://nanomsg.org/v0.5/nn_socket.3.html)
 * Nano::AF_SP - Standard full-blown SP socket
 * Nano::AF_SP_RAW - Raw SP socket. Raw sockets omit the end-to-end functionality found in AF_SP sockets and thus can be used to implement intermediary devices in SP topologies.
 
-protocol parameter defines the type of the socket, which in turn determines the exact semantics of the socket
+Protocol parameter defines the type of the socket, which in turn determines the exact semantics of the socket
 
 * Nano::NN_PAIR (see: http://nanomsg.org/v0.5/nn_pair.7.html) Pair protocol is the simplest and least scalable scalability protocol. It allows scaling by breaking the application in exactly two pieces
 * Nano::NN_REQ  and ::NN_REQ (see: http://nanomsg.org/v0.5/nn_reqrep.7.html) This protocol is used to distribute the workload among multiple stateless workers
@@ -58,6 +58,18 @@ protocol parameter defines the type of the socket, which in turn determines the 
 * Nano::NN_SURVEYOR and Nano::NN_RESPONDENT (see: http://nanomsg.org/v0.5/nn_survey.7.html)
 * Nano::NN_PUSH and Nano::NN_PULL (see: http://nanomsg.org/v0.5/nn_pipeline.7.html)
 * Nano::NN_BUS (see: http://nanomsg.org/v0.5/nn_bus.7.html)
+
+Nanomsg library support 4 network/communication protocol at now: 
+
+* inproc (e.g.: inproc://example) - for in-process low-latency communication at same machine.
+* ipc (e.g.: ipc://example) - for inter-process communication at same machine. 
+* tcp (e.g.: tcp://127.0.0.1:8081) - for tcp communication over LAN/WAN.
+* ws (e.g.: ws://127.0.0.1:8081) - use WebSocket protocol over TCP. Current release, 0.5.х not supported WS, only latest build from master. 
+
+Performance note: ipc vs inproc at same machine has 2х - 4х slow (tested NN_PAIR socket), tcp vs ipc 3х - 5х slow, and ws same as tcp at performance. 
+
+For tcp and ws protocol, for bind method, valid IP (not domain name) and port required. For connect - you may use domain name as adress. More see: http://nanomsg.org/v0.5/nn_tcp.7.html
+
 
 
 NanoMsg\Socket
