@@ -31,8 +31,12 @@
 #ifndef _PHP_NANO_PRIVATE_H_
 # define _PHP_NANO_PRIVATE_H_
 
+/*
 #include <nanomsg/nn.h>
 #include <nanomsg/pubsub.h>
+*/
+#include <nn.h>
+#include <pubsub.h>
 
 #include "main/php_network.h"
 #include "Zend/zend_exceptions.h"
