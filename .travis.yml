@@ -5,8 +5,8 @@ php:
     - 7.0
 
 before_script:
-    - git clone https://github.com/recoye/php-nano.git
-    - cd php-nano
+    - git clone https://github.com/nanomsg/nanomsg.git
+    - cd nanomsg
     - ./autogen.sh
     - ./configure --prefix="${HOME}/nanomsg-master"
     - make
