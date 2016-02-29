@@ -12,7 +12,7 @@ before_script:
     - make
     - make install
     - cd ..
-    - ll ${HOME}/nanomsg-master/include/nanomsg
+    - ls -l ${HOME}/nanomsg-master/include/nanomsg
 
 
 script:
