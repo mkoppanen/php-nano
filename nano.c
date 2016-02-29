@@ -51,8 +51,10 @@ PHP_METHOD(nano, __construct)
 static
 void s_symbol_info_to_zval (zval *zv, struct nn_symbol_properties *buffer TSRMLS_DC)
 {
+/*
     object_init (zv);
 
+    */
     zend_update_property_string (NULL, zv, "name", sizeof ("name") - 1, buffer->name TSRMLS_CC);
     zend_update_property_long (NULL, zv, "value", sizeof ("value") - 1, (long) buffer->value TSRMLS_CC);
     zend_update_property_long (NULL, zv, "ns", sizeof ("ns") - 1, (long) buffer->ns TSRMLS_CC);
@@ -91,7 +93,7 @@ PHP_METHOD(nano, symbolinfo)
     array_init (return_value);
 
     while (1) {
-        zval *zv;
+        zval zv;
         struct nn_symbol_properties buffer;
         rc = nn_symbol_info (i, &buffer, sizeof (buffer));
 
@@ -99,14 +101,17 @@ PHP_METHOD(nano, symbolinfo)
             break;
         }
 
-        MAKE_STD_ZVAL (zv);
-        object_init (zv);
+        ZVAL_UNDEF(&zv);
+        //MAKE_STD_ZVAL (zv);
+        object_init (&zv);
 
-        s_symbol_info_to_zval (zv, &buffer TSRMLS_CC);
-        add_next_index_zval (return_value, zv);
+        s_symbol_info_to_zval (&zv, &buffer TSRMLS_CC);
+        add_next_index_zval (return_value, &zv);
+        ZVAL_UNDEF(&zv);
         ++i;
     }
     return;
+
 }
 /* }}} */
 
@@ -141,7 +146,7 @@ PHP_METHOD(socket, __construct)
     PHP_NANO_ERROR_HANDLING_INIT()
     PHP_NANO_ERROR_HANDLING_THROW()
 
-    rc = zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "ll", &domain, &protocol);
+    rc = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &domain, &protocol);
 
     PHP_NANO_ERROR_HANDLING_RESTORE()
 
@@ -149,8 +154,9 @@ PHP_METHOD(socket, __construct)
         return;
     }
 
-    intern    = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
-    intern->s = nn_socket (domain, protocol);
+    //intern    = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
+    intern->s = nn_socket(domain, protocol);
 
     if (intern->s < 0)
         zend_throw_exception_ex (php_nano_exception_sc_entry, errno TSRMLS_CC, "Error creating nano socket: %s", nn_strerror (errno));
@@ -162,16 +168,18 @@ PHP_METHOD(socket, __construct)
 */
 PHP_METHOD(socket, bind)
 {
-    php_nano_socket_object *intern;
-    char *endpoint;
-    int endpoint_len;
+    char *endpoint = NULL;
+    //int endpoint_len;
+    size_t endpoint_len;
     int eid;
+    php_nano_socket_object *intern = NULL;
 
-    if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS(), "s", &endpoint, &endpoint_len) == FAILURE) {
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
     eid = nn_bind (intern->s, endpoint);
 
     if (eid < 0) {
@@ -190,14 +198,16 @@ PHP_METHOD(socket, connect)
 {
     php_nano_socket_object *intern;
     char *endpoint;
-    int endpoint_len;
+    //int endpoint_len;
+    size_t endpoint_len;
     int eid;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
     eid = nn_connect (intern->s, endpoint);
 
     if (eid < 0) {
@@ -221,7 +231,8 @@ PHP_METHOD(socket, shutdown)
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
     rc = nn_shutdown (intern->s, eid);
 
     if (rc < 0) {
@@ -239,14 +250,17 @@ PHP_METHOD(socket, send)
 {
     php_nano_socket_object *intern;
     char *message;
-    int rc, message_len;
+    //int rc, message_len;
+    int rc;
+    size_t message_len;
     long flags = 0;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s|l", &message, &message_len, &flags) == FAILURE) {
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
     rc = nn_send (intern->s, message, message_len, flags);
 
     if (rc < 0) {
@@ -274,7 +288,8 @@ PHP_METHOD(socket, recv)
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
     len = nn_recv (intern->s, &buffer, NN_MSG, flags);
 
     if (len < 0) {
@@ -286,7 +301,8 @@ PHP_METHOD(socket, recv)
     }
 
     // Create return value
-    ZVAL_STRINGL (return_value, buffer, len, 1);
+    // ZVAL_STRINGL (return_value, buffer, len, 1);
+    ZVAL_STRINGL (return_value, buffer, len);
     nn_freemsg (buffer);
     return;
 }
@@ -306,7 +322,8 @@ PHP_METHOD(socket, setsockopt)
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
 
     // Handle string options 
     if (level == NN_SUB && (option == NN_SUB_SUBSCRIBE || option == NN_SUB_UNSUBSCRIBE)) {
@@ -343,7 +360,9 @@ PHP_METHOD(socket, getsockopt)
         return;
     }
 
-    intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    //intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+    intern = Z_NANO_P(getThis());
+
 
     sz = sizeof (v);
     rc = nn_getsockopt (intern->s, level, option, &v, &sz);
@@ -492,13 +511,17 @@ void s_nano_socket_object_free_storage (void *object TSRMLS_DC)
 #endif
 
 static
-zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
+//zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
+zend_object *s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
 {
-    zval *tmp;
-    zend_object_value retval;
     php_nano_socket_object *intern;
+    zval *tmp;
+    zend_object retval;
 
     /* Allocate memory for it */
+    /**
+     * modify to php7
+     *
     intern = (php_nano_socket_object *) emalloc (sizeof (php_nano_socket_object));
     memset (&intern->zo, 0, sizeof (zend_object));
 
@@ -514,10 +537,28 @@ zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php
     retval.handle = zend_objects_store_put (intern, NULL, (zend_objects_free_object_storage_t) s_nano_socket_object_free_storage, NULL TSRMLS_CC);
     retval.handlers = (zend_object_handlers *) &nano_socket_object_handlers;
     return retval;
+    */
+    intern = (php_nano_socket_object *) emalloc (sizeof (php_nano_socket_object));
+    memset (&intern->zo, 0, sizeof (zend_object));
+
+    intern->s = -1;
+
+    if (ptr) {
+        *ptr = intern;
+    }
+
+	//intern->prop_handler = &nano_socket_object_handlers;
+	zend_object_std_init(&intern->zo, class_type);
+	object_properties_init(&intern->zo, class_type);
+	intern->zo.handlers = &nano_socket_object_handlers;
+
+	return &intern->zo;
+
 }
 
 static
-zend_object_value s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
+//zend_object_value s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
+zend_object *s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
 {
     return
         s_nano_socket_object_new_ex (class_type, NULL TSRMLS_CC);
@@ -542,8 +583,10 @@ PHP_MINIT_FUNCTION(nano)
     php_nano_socket_sc_entry = zend_register_internal_class (&ce_socket TSRMLS_CC);
 
     INIT_NS_CLASS_ENTRY (ce_exception, "NanoMsg", "Exception", NULL);
-    php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C), NULL TSRMLS_CC);
-    php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL_CLASS;
+    //php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C), NULL TSRMLS_CC);
+    php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C) TSRMLS_CC);
+    //php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL_CLASS;
+    php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL;
 
     // Register all symbols as class constants
     s_register_constants (TSRMLS_C);

@@ -72,4 +72,11 @@ typedef struct {
 
 #endif
 
+
+static inline php_nano_socket_object *php_nano_fetch_object(zend_object *obj) {
+	return (php_nano_socket_object *)((char*)(obj) - XtOffsetOf(php_nano_socket_object, zo));
+}
+
+#define Z_NANO_P(zv) php_nano_fetch_object(Z_OBJ_P((zv)))
+
 #endif /* _PHP_NANO_PRIVATE_H_ */
