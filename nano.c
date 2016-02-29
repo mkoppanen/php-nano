@@ -112,7 +112,6 @@ PHP_METHOD(nano, symbolinfo)
         s_symbol_info_to_zval (&zv, &buffer TSRMLS_CC);
         add_next_index_zval (return_value, &zv);
         ZVAL_UNDEF(&zv);
-        MAKE_STD_ZVAL (zv);
 #else
         MAKE_STD_ZVAL (zv);
         object_init (zv);
