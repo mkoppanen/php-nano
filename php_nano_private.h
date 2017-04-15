@@ -31,8 +31,12 @@
 #ifndef _PHP_NANO_PRIVATE_H_
 # define _PHP_NANO_PRIVATE_H_
 
+/*
 #include <nanomsg/nn.h>
 #include <nanomsg/pubsub.h>
+*/
+#include <nn.h>
+#include <pubsub.h>
 
 #include "main/php_network.h"
 #include "Zend/zend_exceptions.h"
@@ -69,6 +73,15 @@ typedef struct {
 #define PHP_NANO_ERROR_HANDLING_THROW() php_set_error_handling(EH_THROW, php_nano_exception_sc_entry TSRMLS_CC);
 
 #define PHP_NANO_ERROR_HANDLING_RESTORE() php_set_error_handling(EH_NORMAL, NULL TSRMLS_CC);
+
+#endif
+
+#if PHP_MAJOR_VERSION >= 7
+static inline php_nano_socket_object *php_nano_fetch_object(zend_object *obj) {
+	return (php_nano_socket_object *)((char*)(obj) - XtOffsetOf(php_nano_socket_object, zo));
+}
+
+#define Z_NANO_P(zv) php_nano_fetch_object(Z_OBJ_P((zv)))
 
 #endif
 

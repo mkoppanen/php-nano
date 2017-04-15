@@ -51,8 +51,10 @@ PHP_METHOD(nano, __construct)
 static
 void s_symbol_info_to_zval (zval *zv, struct nn_symbol_properties *buffer TSRMLS_DC)
 {
+    /**
+     * remove by recoye
     object_init (zv);
-
+    */
     zend_update_property_string (NULL, zv, "name", sizeof ("name") - 1, buffer->name TSRMLS_CC);
     zend_update_property_long (NULL, zv, "value", sizeof ("value") - 1, (long) buffer->value TSRMLS_CC);
     zend_update_property_long (NULL, zv, "ns", sizeof ("ns") - 1, (long) buffer->ns TSRMLS_CC);
@@ -91,7 +93,11 @@ PHP_METHOD(nano, symbolinfo)
     array_init (return_value);
 
     while (1) {
+#if PHP_MAJOR_VERSION >= 7
+        zval zv;
+#else
         zval *zv;
+#endif
         struct nn_symbol_properties buffer;
         rc = nn_symbol_info (i, &buffer, sizeof (buffer));
 
@@ -99,11 +105,20 @@ PHP_METHOD(nano, symbolinfo)
             break;
         }
 
+#if PHP_MAJOR_VERSION >= 7
+        ZVAL_UNDEF(&zv);
+        object_init (&zv);
+
+        s_symbol_info_to_zval (&zv, &buffer TSRMLS_CC);
+        add_next_index_zval (return_value, &zv);
+        ZVAL_UNDEF(&zv);
+#else
         MAKE_STD_ZVAL (zv);
         object_init (zv);
 
         s_symbol_info_to_zval (zv, &buffer TSRMLS_CC);
         add_next_index_zval (return_value, zv);
+#endif
         ++i;
     }
     return;
@@ -149,7 +164,11 @@ PHP_METHOD(socket, __construct)
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern    = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
     intern->s = nn_socket (domain, protocol);
 
     if (intern->s < 0)
@@ -164,14 +183,23 @@ PHP_METHOD(socket, bind)
 {
     php_nano_socket_object *intern;
     char *endpoint;
+#if PHP_MAJOR_VERSION >= 7
+    size_t endpoint_len;
+#else
     int endpoint_len;
+#endif
     int eid;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
+
     eid = nn_bind (intern->s, endpoint);
 
     if (eid < 0) {
@@ -190,14 +218,22 @@ PHP_METHOD(socket, connect)
 {
     php_nano_socket_object *intern;
     char *endpoint;
+#if PHP_MAJOR_VERSION >= 7
+    size_t endpoint_len;
+#else
     int endpoint_len;
+#endif
     int eid;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s", &endpoint, &endpoint_len) == FAILURE) {
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
     eid = nn_connect (intern->s, endpoint);
 
     if (eid < 0) {
@@ -221,7 +257,11 @@ PHP_METHOD(socket, shutdown)
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
     rc = nn_shutdown (intern->s, eid);
 
     if (rc < 0) {
@@ -239,14 +279,23 @@ PHP_METHOD(socket, send)
 {
     php_nano_socket_object *intern;
     char *message;
+#if PHP_MAJOR_VERSION >= 7
+    int rc;
+    size_t message_len;
+#else
     int rc, message_len;
+#endif
     long flags = 0;
 
     if (zend_parse_parameters (ZEND_NUM_ARGS () TSRMLS_CC, "s|l", &message, &message_len, &flags) == FAILURE) {
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
     rc = nn_send (intern->s, message, message_len, flags);
 
     if (rc < 0) {
@@ -274,7 +323,11 @@ PHP_METHOD(socket, recv)
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
     len = nn_recv (intern->s, &buffer, NN_MSG, flags);
 
     if (len < 0) {
@@ -286,7 +339,12 @@ PHP_METHOD(socket, recv)
     }
 
     // Create return value
+#if PHP_MAJOR_VERSION >= 7
+    ZVAL_STRINGL (return_value, buffer, len);
+#else
     ZVAL_STRINGL (return_value, buffer, len, 1);
+#endif
+
     nn_freemsg (buffer);
     return;
 }
@@ -306,7 +364,11 @@ PHP_METHOD(socket, setsockopt)
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
 
     // Handle string options 
     if (level == NN_SUB && (option == NN_SUB_SUBSCRIBE || option == NN_SUB_UNSUBSCRIBE)) {
@@ -343,7 +405,11 @@ PHP_METHOD(socket, getsockopt)
         return;
     }
 
+#if PHP_MAJOR_VERSION >= 7
+    intern = Z_NANO_P(getThis());
+#else
     intern = (php_nano_socket_object *) zend_object_store_get_object (getThis () TSRMLS_CC);
+#endif
 
     sz = sizeof (v);
     rc = nn_getsockopt (intern->s, level, option, &v, &sz);
@@ -492,10 +558,16 @@ void s_nano_socket_object_free_storage (void *object TSRMLS_DC)
 #endif
 
 static
+#if PHP_MAJOR_VERSION >= 7
+zend_object* s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
+#else
 zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php_nano_socket_object **ptr TSRMLS_DC)
+#endif
 {
+#if PHP_MAJOR_VERSION < 7
     zval *tmp;
     zend_object_value retval;
+#endif
     php_nano_socket_object *intern;
 
     /* Allocate memory for it */
@@ -511,13 +583,23 @@ zend_object_value s_nano_socket_object_new_ex (zend_class_entry *class_type, php
     zend_object_std_init (&intern->zo, class_type TSRMLS_CC);
     object_properties_init (&intern->zo, class_type);
 
+#if PHP_MAJOR_VERSION >= 7
+	intern->zo.handlers = &nano_socket_object_handlers;
+
+	return &intern->zo;
+#else
     retval.handle = zend_objects_store_put (intern, NULL, (zend_objects_free_object_storage_t) s_nano_socket_object_free_storage, NULL TSRMLS_CC);
     retval.handlers = (zend_object_handlers *) &nano_socket_object_handlers;
     return retval;
+#endif
 }
 
 static
+#if PHP_MAJOR_VERSION >= 7
+zend_object* s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
+#else
 zend_object_value s_nano_socket_object_new (zend_class_entry *class_type TSRMLS_DC)
+#endif
 {
     return
         s_nano_socket_object_new_ex (class_type, NULL TSRMLS_CC);
@@ -542,8 +624,14 @@ PHP_MINIT_FUNCTION(nano)
     php_nano_socket_sc_entry = zend_register_internal_class (&ce_socket TSRMLS_CC);
 
     INIT_NS_CLASS_ENTRY (ce_exception, "NanoMsg", "Exception", NULL);
+
+#if PHP_MAJOR_VERSION >= 7
+    php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C) TSRMLS_CC);
+    php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL;
+#else
     php_nano_exception_sc_entry = zend_register_internal_class_ex (&ce_exception, zend_exception_get_default (TSRMLS_C), NULL TSRMLS_CC);
     php_nano_exception_sc_entry->ce_flags &= ~ZEND_ACC_FINAL_CLASS;
+#endif
 
     // Register all symbols as class constants
     s_register_constants (TSRMLS_C);
